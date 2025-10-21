@@ -1,0 +1,16 @@
+{
+  "device": {
+    "id": "tc375-sim-001",
+    "type": "TC375_SIMULATOR"
+  },
+  "gateway": {
+    "host": "localhost",
+    "port": 8765,
+    "use_tls": true,
+    "verify_peer": false,
+    "ca_cert": ""
+  },
+  "heartbeat_interval_sec": 10,
+  "sensor_update_interval_sec": 5
+}
+

@@ -1,0 +1,55 @@
+# Build artifacts
+build/
+*.o
+*.a
+*.so
+*.dylib
+*.out
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+certs/*.crt
+certs/*.key
+certs/*.pem
+!certs/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# TC375 specific (for later)
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
