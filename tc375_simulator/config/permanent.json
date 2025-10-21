@@ -1,0 +1,20 @@
+{
+  "_comment": "Permanent Configuration - Stored in Flash (Immutable in field)",
+  
+  "ecu_serial": "TC375-SIM-001-20251021",
+  "mac_address": "02:00:00:AA:BB:CC",
+  "hardware_version": "TC375TP-LiteKit-v2.0",
+  "manufacture_date": 1729468800,
+  
+  "vin": "KMHGH4JH1NU123456",
+  "vehicle_model": "Genesis G80 EV",
+  "vehicle_year": 2025,
+  "vehicle_type": 0,
+  
+  "calibration": {
+    "adc_channels": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+    "temperature_offset": 0.0,
+    "voltage_calibration": 1.0
+  }
+}
+
