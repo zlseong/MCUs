@@ -36,20 +36,22 @@ tricore-objcopy -O ihex stage1_boot.elf stage1_boot.hex
 echo -e "${GREEN}✅ Stage 1 built: stage1/stage1_boot.hex${NC}"
 cd ..
 
-# Build Stage 2A (188 KB)
-echo -e "${BLUE}[2/3] Building Stage 2A Bootloader...${NC}"
+# Build Stage 2A (188 KB) - PRIMARY bootloader
+echo -e "${BLUE}[2/3] Building Stage 2A Bootloader (0x80011000)...${NC}"
 cd stage2
-tricore-gcc -DSTAGE2_A -c stage2_main.c -o stage2a_main.o -Os -Wall
-tricore-ld -T stage2_linker.ld -o stage2a_boot.elf stage2a_main.o
+tricore-gcc -c stage2_main.c -o stage2a_main.o -Os -Wall
+tricore-ld -T stage2a_linker.ld -o stage2a_boot.elf stage2a_main.o
 tricore-objcopy -O ihex stage2a_boot.elf stage2a_boot.hex
-echo -e "${GREEN}✅ Stage 2A built: stage2/stage2a_boot.hex${NC}"
+tricore-objcopy -O binary stage2a_boot.elf stage2a_boot.bin
+echo -e "${GREEN}✅ Stage 2A built: stage2/stage2a_boot.hex (@ 0x80011000)${NC}"
 
-# Build Stage 2B (188 KB, same code)
-echo -e "${BLUE}[3/3] Building Stage 2B Bootloader...${NC}"
-tricore-gcc -DSTAGE2_B -c stage2_main.c -o stage2b_main.o -Os -Wall
-tricore-ld -T stage2_linker.ld -o stage2b_boot.elf stage2b_main.o
+# Build Stage 2B (188 KB) - SECONDARY bootloader (OTA backup)
+echo -e "${BLUE}[3/3] Building Stage 2B Bootloader (0x80041000)...${NC}"
+tricore-gcc -c stage2_main.c -o stage2b_main.o -Os -Wall
+tricore-ld -T stage2b_linker.ld -o stage2b_boot.elf stage2b_main.o
 tricore-objcopy -O ihex stage2b_boot.elf stage2b_boot.hex
-echo -e "${GREEN}✅ Stage 2B built: stage2/stage2b_boot.hex${NC}"
+tricore-objcopy -O binary stage2b_boot.elf stage2b_boot.bin
+echo -e "${GREEN}✅ Stage 2B built: stage2/stage2b_boot.hex (@ 0x80041000)${NC}"
 cd ..
 
 echo ""

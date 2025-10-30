@@ -5,72 +5,149 @@
 #include <stdbool.h>
 
 // ============================================================================
-// Common Definitions for Both Stage 1 and Stage 2
+// TC375 Hardware Bank Switching Memory Map (Infineon Standard)
 // ============================================================================
 
-// Boot Banks
+// TC375: 6 MB PFLASH = Region A (3 MB) + Region B (3 MB)
+// Hardware automatically switches between Region A and B
+
+// ============================================================================
+// Region A (3 MB) @ 0x80000000 - Active/Cached
+// ============================================================================
+
+// BMI Header (Boot Mode Index) - Hardware fixed
+#define REGION_A_BMI_START      0x80000000
+#define REGION_A_BMI_SIZE       0x00000100  // 256 bytes
+
+// SSW (Startup Software) - Immutable
+#define REGION_A_SSW_START      0x80000100
+#define REGION_A_SSW_SIZE       0x0000FF00  // ~64 KB
+
+// Reserved Areas - DO NOT USE!
+#define REGION_A_RESERVED_TP    0x80010000  // TP: 64 KB
+#define REGION_A_RESERVED_HSM   0x80020000  // HSM: 512 KB
+
+// Bootloader (Application Bootloader)
+#define REGION_A_BOOT_META      0x800A0000  // Metadata (4 KB)
+#define REGION_A_BOOT_START     0x800A1000  // Code start
+#define REGION_A_BOOT_SIZE      0x00031000  // 196 KB
+#define REGION_A_BOOT_END       0x800D1FFF
+
+// Application (User Application)
+#define REGION_A_APP_META       0x800D2000  // Metadata (4 KB)
+#define REGION_A_APP_START      0x800D3000  // Code start
+#define REGION_A_APP_SIZE       0x0112D000  // ~2.1 MB
+#define REGION_A_APP_END        0x81FFFFFF
+
+#define REGION_A_START          0x80000000
+#define REGION_A_SIZE           0x02000000  // 3 MB
+#define REGION_A_END            0x81FFFFFF
+
+// ============================================================================
+// Region B (3 MB) @ 0x82000000 - Inactive/Backup
+// ============================================================================
+
+// BMI Header
+#define REGION_B_BMI_START      0x82000000
+#define REGION_B_BMI_SIZE       0x00000100  // 256 bytes
+
+// SSW (Startup Software)
+#define REGION_B_SSW_START      0x82000100
+#define REGION_B_SSW_SIZE       0x0000FF00  // ~64 KB
+
+// Reserved Areas
+#define REGION_B_RESERVED_TP    0x82010000  // TP: 64 KB
+#define REGION_B_RESERVED_HSM   0x82020000  // HSM: 512 KB
+
+// Bootloader (Application Bootloader)
+#define REGION_B_BOOT_META      0x820A0000  // Metadata (4 KB)
+#define REGION_B_BOOT_START     0x820A1000  // Code start
+#define REGION_B_BOOT_SIZE      0x00031000  // 196 KB
+#define REGION_B_BOOT_END       0x820D1FFF
+
+// Application (User Application)
+#define REGION_B_APP_META       0x820D2000  // Metadata (4 KB)
+#define REGION_B_APP_START      0x820D3000  // Code start
+#define REGION_B_APP_SIZE       0x0112D000  // ~2.1 MB
+#define REGION_B_APP_END        0x83FFFFFF
+
+#define REGION_B_START          0x82000000
+#define REGION_B_SIZE           0x02000000  // 3 MB
+#define REGION_B_END            0x83FFFFFF
+
+// ============================================================================
+// Compatibility Aliases (for backward compatibility)
+// ============================================================================
+
+// Legacy names (will be deprecated)
+#define BOOT_A_START            REGION_A_BOOT_START
+#define BOOT_B_START            REGION_B_BOOT_START
+#define APP_A_START             REGION_A_APP_START
+#define APP_B_START             REGION_B_APP_START
+
+// ============================================================================
+// PFLASH Total
+// ============================================================================
+
+#define PFLASH_START            0x80000000
+#define PFLASH_SIZE             0x04000000  // 6 MB (Region A + B)
+#define PFLASH_END              0x84000000
+
+// ============================================================================
+// DFLASH Configuration Storage
+// ============================================================================
+
+#define DFLASH_START            0xAF000000
+#define DFLASH_SIZE             0x00060000  // 384 KB
+
+#define BOOT_CFG_EEPROM         0xAF000000  // Boot config (4 KB)
+#define APP_DATA_START          0xAF001000  // App data (60 KB)
+#define OTA_BUFFER_START        0xAF010000  // OTA buffer (64 KB)
+#define UCB_START               0xAF400000  // Infineon UCB (reserved)
+
+// ============================================================================
+// Boot Configuration (DFLASH)
+// ============================================================================
+
 typedef enum {
-    BANK_A = 0,
-    BANK_B = 1,
+    BANK_A = 0,      // Region A
+    BANK_B = 1,      // Region B
     BANK_INVALID = 0xFF
 } BootBank;
 
-// Boot Metadata (공통 구조)
 typedef struct {
-    uint32_t magic;           // 0xA5A5A5A5 = Valid
-    uint32_t version;         // Firmware version
-    uint32_t size;            // Firmware size in bytes
-    uint32_t crc32;           // CRC32 checksum
-    uint8_t  signature[256];  // PQC Dilithium3 signature
-    uint32_t build_timestamp; // Build time
-    uint32_t boot_count;      // Boot attempt counter
-    uint8_t  valid;           // 0=Invalid, 1=Valid, 2=Testing
-    uint8_t  reserved[243];   // Padding to 512 bytes
-} __attribute__((packed)) BootMetadata;
-
-// Memory Map Constants
-#define STAGE1_START        0x80000000
-#define STAGE1_SIZE         0x00010000  // 64 KB
-
-#define STAGE2A_META        0x80010000
-#define STAGE2A_START       0x80011000
-#define STAGE2A_SIZE        0x0002F000  // 188 KB
-
-#define STAGE2B_META        0x80040000
-#define STAGE2B_START       0x80041000
-#define STAGE2B_SIZE        0x0002F000  // 188 KB
-
-#define APP_A_META          0x80070000
-#define APP_A_START         0x80071000
-#define APP_A_SIZE          0x00280000  // 2.5 MB
-
-#define APP_B_META          0x802F1000
-#define APP_B_START         0x802F2000
-#define APP_B_SIZE          0x00280000  // 2.5 MB
-
-// EEPROM Boot Configuration
-#define BOOT_CFG_EEPROM     0xAF000000
-
-typedef struct {
-    uint8_t  stage2_active;   // 0=2A, 1=2B
-    uint8_t  stage2_boot_cnt_a;
-    uint8_t  stage2_boot_cnt_b;
-    uint8_t  app_active;      // 0=App A, 1=App B
-    uint8_t  app_boot_cnt_a;
-    uint8_t  app_boot_cnt_b;
-    uint8_t  reserved[10];
-    uint32_t crc;             // Config integrity
+    uint8_t  active_region;      // 0=Region A, 1=Region B
+    uint8_t  region_a_boot_cnt;  // Region A boot attempts
+    uint8_t  region_b_boot_cnt;  // Region B boot attempts
+    uint8_t  ota_pending;        // OTA update pending flag
+    uint8_t  reserved[12];
+    uint32_t crc;                // Config CRC32
 } __attribute__((packed)) BootConfig;
+
+// ============================================================================
+// Metadata Structure (512 bytes)
+// ============================================================================
+
+typedef struct {
+    uint32_t magic;           // 0xA5A5A5A5
+    uint32_t version;         // Firmware version
+    uint32_t size;            // Firmware size
+    uint32_t crc32;           // CRC32
+    uint8_t  signature[256];  // PQC Dilithium3
+    uint32_t build_timestamp;
+    uint32_t boot_count;
+    uint8_t  valid;           // 0=Invalid, 1=Valid, 2=Testing
+    uint8_t  reserved[243];
+} __attribute__((packed)) BootMetadata;
 
 // Configuration
 #define MAX_BOOT_ATTEMPTS   3
 #define MAGIC_NUMBER        0xA5A5A5A5
 
-// Function Prototypes (common)
+// Function Prototypes
 uint32_t calculate_crc32(const uint8_t* data, uint32_t length);
-bool verify_dilithium_signature(const uint8_t* data, uint32_t length, const uint8_t* signature);
-void debug_print(const char* msg);
+bool verify_dilithium_signature(const uint8_t* data, uint32_t length, const uint8_t* sig);
+void debug_print(const char* msg, ...);
 void system_reset(void);
 
 #endif // BOOT_COMMON_H
-

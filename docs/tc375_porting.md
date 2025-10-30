@@ -1,43 +1,43 @@
-# TC375 Lite Kit 포팅 가이드
+# TC375 Lite Kit  
 
-## Phase 2: 실제 TC375 하드웨어 포팅
+## Phase 2:  TC375  
 
-이 문서는 Mac 시뮬레이터에서 실제 TC375 Lite Kit으로 포팅하는 가이드입니다.
+  Mac   TC375 Lite Kit  .
 
-## 사전 준비
+##  
 
-### 하드웨어
+### 
 - TC375 Lite Kit V2
-- USB 케이블 (디버깅/플래싱용)
-- (선택) DAP (Debug Access Port) 디버거
+- USB  (/)
+- () DAP (Debug Access Port) 
 
-### 소프트웨어
-- **Windows PC** (권장) 또는 Linux
+### 
+- **Windows PC** ()  Linux
 - AURIX Development Studio (ADS)
-- TriCore GCC 툴체인
+- TriCore GCC 
 - iLLD (Infineon Low Level Drivers)
 
-## 개발 환경 설정
+##   
 
-### 1. ADS 설치
+### 1. ADS 
 ```
-1. Infineon 웹사이트에서 ADS 다운로드
-2. 설치 및 라이선스 활성화
-3. TC375 타겟 추가
+1. Infineon  ADS 
+2.    
+3. TC375  
 ```
 
-### 2. 프로젝트 생성
+### 2.  
 ```
-File → New → AURIX Project
+File -> New -> AURIX Project
 - Target: TC375TP
 - Template: iLLD Base Project
 ```
 
-## 코드 포팅
+##  
 
-### 네트워크 스택
+###  
 
-**Mac 시뮬레이터:**
+**Mac :**
 ```cpp
 #include <openssl/ssl.h>  // POSIX SSL
 ```
@@ -48,12 +48,12 @@ File → New → AURIX Project
 #include "lwip/tcp.h"
 #include "mbedtls/ssl.h"
 
-// Option 2: 상용 TCP/IP 스택
+// Option 2:  TCP/IP 
 ```
 
-### 스레딩
+### 
 
-**Mac 시뮬레이터:**
+**Mac :**
 ```cpp
 #include <thread>
 std::thread worker_thread_;
@@ -69,90 +69,90 @@ xTaskCreate(...);
 // Option 2: AUTOSAR OS
 ```
 
-### 파일 시스템
+###  
 
-**Mac 시뮬레이터:**
+**Mac :**
 ```cpp
 std::ifstream file("config.json");
 ```
 
 **TC375:**
 ```cpp
-// 컴파일 타임 설정 or
+//    or
 // Flash filesystem (SPIFFS, LittleFS)
 ```
 
-## 통신 스택 구현
+##   
 
-### 1. Ethernet 초기화 (TC375)
+### 1. Ethernet  (TC375)
 
 ```c
-// iLLD Ethernet 초기화
+// iLLD Ethernet 
 void init_ethernet(void) {
-    // ETH 핀 설정
+    // ETH  
     IfxEth_Eth_setPinDriver(...);
     
-    // PHY 초기화
+    // PHY 
     IfxEth_Eth_initPhy(...);
     
-    // LwIP 초기화
+    // LwIP 
     lwip_init();
 }
 ```
 
-### 2. TLS 클라이언트 (mbedTLS)
+### 2. TLS  (mbedTLS)
 
 ```c
 mbedtls_ssl_context ssl;
 mbedtls_ssl_config conf;
 
-// 초기화
+// 
 mbedtls_ssl_init(&ssl);
 mbedtls_ssl_config_init(&conf);
 
-// TLS 1.3 설정
+// TLS 1.3 
 mbedtls_ssl_conf_min_version(&conf, 
     MBEDTLS_SSL_MAJOR_VERSION_3, 
     MBEDTLS_SSL_MINOR_VERSION_4);
 ```
 
-### 3. 센서 읽기
+### 3.  
 
 ```c
 // VADC (Analog-Digital Converter)
 float read_temperature(void) {
     IfxVadc_Adc_Channel channel;
-    // VADC 초기화 및 읽기
+    // VADC   
     return result * SCALE_FACTOR;
 }
 ```
 
-## 메모리 관리
+##  
 
-### Flash 메모리
+### Flash 
 ```
 TC375: 6 MB Flash
-- 부트로더: 256 KB
-- 애플리케이션: 5 MB
-- 설정: 512 KB
-- OTA 백업: 나머지
+- : 256 KB
+- : 5 MB
+- : 512 KB
+- OTA : 
 ```
 
 ### RAM
 ```
 TC375: 4.25 MB RAM
-- 힙: 1 MB
-- 스택: 128 KB
+- : 1 MB
+- : 128 KB
 - LwIP: 500 KB
 - mbedTLS: 200 KB
-- 애플리케이션: 나머지
+- : 
 ```
 
-## 빌드 설정
+##  
 
-### CMake → TriCore GCC
+### CMake -> TriCore GCC
 
-**시뮬레이터:**
+**:**
 ```cmake
 set(CMAKE_CXX_COMPILER /usr/bin/c++)
 ```
@@ -165,66 +165,66 @@ set(CMAKE_CXX_COMPILER tricore-g++)
 set(CMAKE_C_FLAGS "-mtc37x -fno-common")
 ```
 
-## 디버깅
+## 
 
-### UART 로그
+### UART 
 ```c
-// UART0를 디버그 출력으로
+// UART0  
 void debug_printf(const char* fmt, ...) {
     char buffer[256];
-    // UART로 전송
+    // UART 
     IfxAsclin_Asc_write(&uart, buffer, len);
 }
 ```
 
-### LED 상태
+### LED 
 ```c
-// LED로 상태 표시
+// LED  
 #define LED_HEARTBEAT   P13_0
 #define LED_CONNECTED   P13_1
 #define LED_ERROR       P13_2
 ```
 
-## 테스트 계획
+##  
 
-### Phase 2-1: 기본 통신
-1. Ethernet 링크 확인
-2. TCP 연결 수립
-3. 데이터 송수신
+### Phase 2-1:  
+1. Ethernet  
+2. TCP  
+3.  
 
 ### Phase 2-2: TLS
-1. mbedTLS 통합
-2. TLS 핸드셰이크
-3. 암호화 통신
+1. mbedTLS 
+2. TLS 
+3.  
 
-### Phase 2-3: 프로토콜
-1. JSON 파싱 (cJSON)
-2. 프로토콜 메시지
-3. 통합 테스트
+### Phase 2-3: 
+1. JSON  (cJSON)
+2.  
+3.  
 
-### Phase 2-4: 안정화
-1. 재연결 로직
-2. 에러 처리
-3. 장시간 테스트
+### Phase 2-4: 
+1.  
+2.  
+3.  
 
-## 성능 최적화
+##  
 
-### 1. 메모리
-- JSON 대신 바이너리 프로토콜 고려
-- 정적 버퍼 사용
-- 메모리 풀 활용
+### 1. 
+- JSON    
+-   
+-   
 
 ### 2. CPU
-- 센서 읽기 최적화
-- DMA 활용
-- 인터럽트 기반 처리
+-   
+- DMA 
+-   
 
-### 3. 네트워크
-- Nagle 알고리즘 비활성화
-- 버퍼 크기 튜닝
-- Keep-alive 설정
+### 3. 
+- Nagle  
+-   
+- Keep-alive 
 
-## 참고 자료
+##  
 
 - Infineon TC375 User Manual
 - iLLD Documentation
@@ -232,7 +232,7 @@ void debug_printf(const char* fmt, ...) {
 - mbedTLS Porting Guide
 - FreeRTOS TC375 Port
 
-## 도움이 필요한 경우
+##   
 
 GitHub Issues: https://github.com/zlseong/MCUs/issues
 

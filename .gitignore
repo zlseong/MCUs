@@ -1,17 +1,21 @@
-# Build artifacts
+# Build outputs
 build/
 *.o
+*.elf
+*.bin
+*.hex
+*.map
+*.out
 *.a
 *.so
 *.dylib
-*.out
 
 # CMake
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 Makefile
-*.cmake
+install_manifest.txt
 
 # IDE
 .vscode/
@@ -19,37 +23,46 @@ Makefile
 *.swp
 *.swo
 *~
-
-# macOS
 .DS_Store
-.AppleDouble
-.LSOverride
 
 # Certificates and keys
-*.pem
 *.key
 *.crt
-*.p12
-*.pfx
-certs/*.crt
+*.csr
+*.pem
+*.srl
 certs/*.key
+certs/*.crt
+certs/*.csr
 certs/*.pem
-!certs/.gitkeep
+!certs/README.md
 
-# Logs
+# Config files with secrets
+config/permanent.json
+config/device.json
+*.secret
+
+# Test outputs
+results/
+*.csv
+*.json
 *.log
-logs/
-
-# TC375 specific (for later)
-*.elf
-*.hex
-*.bin
-*.map
-*.lst
 
 # Temporary files
+tmp/
+temp/
 *.tmp
-*.temp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+
+# Backup files
 *.bak
 *.backup
-

@@ -1,101 +1,152 @@
-# MCUs - TC375 Lite Kit & Simulator
+# TC375 Vehicle ECU System
 
-TC375 Lite Kit과 통신하는 디바이스 시뮬레이터 및 펌웨어 프로젝트입니다.
+AURIX TC375 기반 차량 ECU 시스템 구현.
+OTA(Over-The-Air) 업데이트, 보안 부팅, DoIP 통신, Pure PQC TLS 지원.
 
-## 🎯 프로젝트 개요
-
-이 레포지토리는 Vehicle Gateway Client와 TLS 통신을 수행하는 MCU 디바이스를 위한 프로젝트입니다.
-
-### 개발 단계
-
-#### Phase 1: Mac 시뮬레이터 (현재) ✅
-- macOS에서 TC375 디바이스를 시뮬레이션
-- Gateway와의 TLS 통신 프로토콜 검증
-- 빠른 프로토타이핑 및 테스트
-
-#### Phase 2: TC375 실제 펌웨어 (향후) ⏳
-- Aurix Development Studio (ADS)
-- iLLD + FreeRTOS/AUTOSAR
-- 실제 하드웨어 배포
-
-## 📁 프로젝트 구조
+## 시스템 구성
 
 ```
-MCUs/
-├── tc375_simulator/         # Mac용 시뮬레이터
-│   ├── main.cpp
-│   ├── include/
-│   │   ├── tls_client.hpp
-│   │   ├── device_simulator.hpp
-│   │   └── protocol.hpp
-│   ├── src/
-│   │   ├── tls_client.cpp
-│   │   ├── device_simulator.cpp
-│   │   └── protocol.cpp
-│   └── config/
-│       └── device.json
-├── docs/                    # 문서
-│   ├── protocol.md
-│   └── tc375_porting.md
-└── CMakeLists.txt           # 빌드 시스템
+VMG (Gateway)
+    |
+    +-- TC375 #1 (Domain Controller)
+            |
+            +-- TC375 #2 (ECU)
+            +-- TC375 #3 (ECU)
 ```
 
-## 🚀 빌드 및 실행
+- VMG: macOS/Linux, DoIP Server, OTA 관리
+- TC375 #1: Domain Controller, 중계 역할
+- TC375 #2+: 말단 ECU
 
-### 의존성 설치 (macOS)
+## 주요 기능
+
+### 부트로더
+- 2-Stage 부트로더 (SSW + Application Bootloader)
+- Dual Bank 구조 (Region A/B)
+- 안전한 OTA 업데이트 지원
+- 자동 롤백 기능
+
+### 통신
+- DoIP (Diagnostics over IP) / ISO 13400
+- TLS 1.3 암호화
+- UDS (Unified Diagnostic Services) / ISO 14229
+- Persistent TCP 연결
+
+### 보안
+- PQC TLS (ML-KEM + ML-DSA/ECDSA)
+- ML-KEM-768 키 교환 (양자 내성)
+- ML-DSA-65 또는 ECDSA-P256 전자서명
+- X.509 인증서 기반 mTLS
+- Key Exchange는 ML-KEM만 사용 (X25519 미사용)
+
+## 메모리 구조
+
+TC375 6MB PFLASH, Region A/B 각 3MB:
+
+```
+Region A (0x80000000):
+  0x80000100  SSW (64KB)
+  0x80020000  HSM PCODE (512KB)
+  0x800A1000  Bootloader (200KB)
+  0x800D3000  Application (2.1MB)
+
+Region B (0x82000000):
+  동일 구조, OTA 백업용
+```
+
+## 빌드
+
+### 요구사항
+- AURIX Development Studio
+- TriCore GCC
+- CMake 3.15+
+
+### 부트로더 빌드
+```bash
+cd tc375_bootloader
+./build_bootloader.sh
+```
+
+출력:
+- ssw/ssw_boot.hex
+- bootloader/bootloader_a_boot.hex
+- bootloader/bootloader_b_boot.hex
+
+### 시뮬레이터 빌드
+```bash
+cd tc375_simulator
+mkdir build && cd build
+cmake ..
+make
+```
+
+## 네트워크 설정
+
+```
+VMG:    192.168.1.1:13400
+MCU#1:  192.168.1.10:13401
+MCU#2:  192.168.1.11
+```
+
+시뮬레이터는 localhost의 다른 포트 사용 (13401, 13402...).
+
+## 실행
 
 ```bash
-brew install cmake openssl nlohmann-json
+# Terminal 1: VMG
+cd vehicle_gateway/build
+./vmg_gateway
+
+# Terminal 2: TC375 Simulator #1
+cd tc375_simulator/build
+./tc375_simulator --port 13401
+
+# Terminal 3: TC375 Simulator #2
+./tc375_simulator --port 13402
 ```
 
-### 빌드
+## OTA 업데이트
 
-```bash
-# 빌드
-./build.sh
-
-# 실행
-./build/tc375_simulator
+```
+vmg> ota TC375_Engine firmware.bin
 ```
 
-## 🔧 설정
+1. VMG가 MCU#1로 펌웨어 전송
+2. MCU#1이 Region B에 쓰기
+3. 검증 후 Region 전환
+4. 재부팅
 
-`tc375_simulator/config/device.json`:
+실패 시 자동으로 이전 Region으로 롤백.
 
-```json
-{
-  "device": {
-    "id": "tc375-sim-001",
-    "type": "TC375_SIMULATOR"
-  },
-  "gateway": {
-    "host": "localhost",
-    "port": 8765,
-    "use_tls": true
-  }
-}
-```
+## 문서
 
-## 🔗 관련 프로젝트
+- `docs/corrected_architecture.md`: 시스템 아키텍처
+- `docs/tc375_memory_map_corrected.md`: 메모리 맵
+- `docs/doip_tls_architecture.md`: DoIP 통신
+- `docs/ISO_13400_specification.md`: DoIP 표준
+- `docs/bootloader_implementation.md`: 부트로더 구현
 
-- **Gateway Client**: https://github.com/zlseong/Client
-- **Server**: https://github.com/ansj1105/mqtt_protocol
+## 참고
 
-## 📝 통신 프로토콜
+- TC375 Lite Kit 기준 (6MB PFLASH)
+- ISO 13400 (DoIP), ISO 14229 (UDS) 준수
+- Infineon AURIX 표준 메모리 맵 사용
 
-Gateway와의 통신 프로토콜은 `docs/protocol.md`를 참조하세요.
+## 라이선스
 
-## 🔒 보안
+MIT
 
-- TLS 1.3 지원
-- 클라이언트 인증서 인증
-- PQC 준비
+## 추가 문서
 
-## 📄 라이선스
+- `docs/vmg_pqc_implementation.md`: VMG Pure PQC TLS 구현 상세
+- `vehicle_gateway/README.md`: VMG 빌드 및 사용법
+- Benchmark 참조: https://github.com/zlseong/Benchmark_mTLS_with_PQC-ML-KEM-ML-DGS-.git
 
-MIT License
+## TODO
 
-## 🐛 버그 리포트
-
-이슈를 등록해주세요: https://github.com/zlseong/MCUs/issues
-
+- [x] VMG Gateway PQC 구현
+- [x] TC375 PQC DoIP Client 구현
+- [x] TLS 인증서 생성 자동화
+- [ ] MQTT QoS 2 최적화
+- [ ] OTA 진행률 표시
+- [ ] 실제 TC375 하드웨어 테스트

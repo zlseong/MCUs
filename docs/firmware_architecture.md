@@ -1,24 +1,24 @@
-# TC375 펌웨어 아키텍처: UDS, 롤백, A/B 파티션
+# TC375  : UDS, , A/B 
 
-## 📋 개요
+## [LIST] 
 
-TC375에서 안전한 OTA 업데이트를 위한 완전한 아키텍처입니다.
+TC375  OTA    .
 
 ---
 
-## 1️⃣ **UDS (Unified Diagnostic Services)**
+## 1⃣ **UDS (Unified Diagnostic Services)**
 
-### ISO 14229 표준 구현
+### ISO 14229  
 
 #### **CAN/CAN-FD Transport Layer**
 
 ```c
-// TC375 실제 구현
+// TC375  
 #include "Ifx_Cfg.h"
 #include "IfxCan.h"
 
-#define UDS_REQUEST_ID   0x7E0   // 진단 요청
-#define UDS_RESPONSE_ID  0x7E8   // 진단 응답
+#define UDS_REQUEST_ID   0x7E0   //  
+#define UDS_RESPONSE_ID  0x7E8   //  
 
 void sendUdsResponse(uint8_t service, uint8_t* data, size_t len) {
     IfxCan_Message msg;
@@ -31,7 +31,7 @@ void sendUdsResponse(uint8_t service, uint8_t* data, size_t len) {
 }
 ```
 
-#### **서비스 핸들러 등록**
+#### **  **
 
 ```c
 typedef UdsResponse (*UdsServiceHandler)(UdsMessage*);
@@ -56,89 +56,89 @@ void processUdsRequest(uint8_t* data, size_t len) {
 
 ---
 
-## 2️⃣ **에러 핸들링 & 롤백 설계**
+## 2⃣ **  &  **
 
-### **상태 머신**
+### ** **
 
 ```
-                    ┌─────────┐
-                    │  IDLE   │
-                    └────┬────┘
-                         │
+                    +---------+
+                    |  IDLE   |
+                    +----+----+
+                         |
                     startOTA()
-                         │
-                         ▼
-                  ┌─────────────┐
-                  │ DOWNLOADING │
-                  └──────┬──────┘
-                         │
-                   verify() ──┐
-                         │    │ FAIL
-                         ▼    │
-                  ┌───────────▼──┐
-                  │  VERIFYING   │
-                  └──────┬───────┘
-                         │
-                  install() ──┐
-                         │    │ FAIL
-                         ▼    │
-                  ┌───────────▼──┐
-                  │ INSTALLING   │
-                  └──────┬───────┘
-                         │
-                         ▼
-                    ┌─────────┐      ┌──────────┐
-                    │ SUCCESS │ ◄────┤ ROLLBACK │
-                    └─────────┘      └──────────┘
-                                           ▲
-                                           │
+                         |
+                         v
+                  +-------------+
+                  | DOWNLOADING |
+                  +------+------+
+                         |
+                   verify() --+
+                         |    | FAIL
+                         v    |
+                  +-----------v--+
+                  |  VERIFYING   |
+                  +------+-------+
+                         |
+                  install() --+
+                         |    | FAIL
+                         v    |
+                  +-----------v--+
+                  | INSTALLING   |
+                  +------+-------+
+                         |
+                         v
+                    +---------+      +----------+
+                    | SUCCESS | <----+ ROLLBACK |
+                    +---------+      +----------+
+                                           ^
+                                           |
                                       boot fail
 ```
 
-### **트랜잭션 관리**
+### ** **
 
 ```cpp
 class OtaTransaction {
 public:
     bool begin() {
-        // 1. 현재 상태 백업
+        // 1.   
         saveCurrentState();
         
-        // 2. 트랜잭션 시작 마킹
+        // 2.   
         markTransactionStart();
         
-        // 3. 타겟 뱅크 준비
+        // 3.   
         prepareTargetBank();
         
         return true;
     }
     
     bool commit() {
-        // 1. 검증 완료 확인
+        // 1.   
         if (!verificationComplete_) {
             return false;
         }
         
-        // 2. 뱅크 전환
+        // 2.  
         switchToNewBank();
         
-        // 3. 트랜잭션 완료 마킹
+        // 3.   
         markTransactionComplete();
         
         return true;
     }
     
     bool rollback() {
-        // 1. 진행 중인 작업 중단
+        // 1.    
         abortCurrentOperation();
         
-        // 2. 백업된 상태 복원
+        // 2.   
         restorePreviousState();
         
-        // 3. 이전 뱅크로 복귀
+        // 3.   
         switchToPreviousBank();
         
-        // 4. 실패 로그 기록
+        // 4.   
         logRollbackReason();
         
         return true;
@@ -155,19 +155,19 @@ private:
 };
 ```
 
-### **부트 검증 & 자동 롤백**
+### **  &  **
 
 ```cpp
-// Bootloader에서 실행
+// Bootloader 
 void bootloader_main(void) {
     BootBank active = getActiveBank();
     
-    // 1. 부트 카운터 증가
+    // 1.   
     incrementBootCount(active);
     
-    // 2. 과도한 재부팅 감지 (brick 방지)
+    // 2.    (brick )
     if (getBootCount(active) > MAX_BOOT_ATTEMPTS) {
-        // 3번 이상 부팅 실패 → 자동 롤백
+        // 3    ->  
         printf("[Bootloader] Too many boot failures, rolling back...\n");
         
         BootBank fallback = (active == BANK_A) ? BANK_B : BANK_A;
@@ -177,26 +177,26 @@ void bootloader_main(void) {
             resetBootCount(fallback);
             systemReset();
         } else {
-            // 양쪽 다 실패 → 복구 모드
+            //    ->  
             enterRecoveryMode();
         }
     }
     
-    // 3. CRC 검증
+    // 3. CRC 
     if (!verifyCRC(active)) {
         printf("[Bootloader] CRC failed, trying fallback...\n");
         autoRollback();
         return;
     }
     
-    // 4. 서명 검증
+    // 4.  
     if (!verifySignature(active)) {
         printf("[Bootloader] Signature failed, trying fallback...\n");
         autoRollback();
         return;
     }
     
-    // 5. 정상 부팅
+    // 5.  
     printf("[Bootloader] Booting from Bank %c\n", 
            active == BANK_A ? 'A' : 'B');
     resetBootCount(active);
@@ -206,39 +206,39 @@ void bootloader_main(void) {
 
 ---
 
-## 3️⃣ **메모리 A/B 분할 (Dual Bank)**
+## 3⃣ ** A/B  (Dual Bank)**
 
-### **TC375 Flash 메모리 맵**
+### **TC375 Flash  **
 
 ```
 TC375 Flash: 6 MB (0x00000000 - 0x00600000)
 
-┌─────────────────────────────────┐ 0x00000000
-│  Bootloader (256 KB)            │ ← 부트로더 (변경 불가)
-├─────────────────────────────────┤ 0x00040000
-│  Bank Metadata A (4 KB)         │ ← Bank A 메타데이터
-├─────────────────────────────────┤ 0x00041000
-│  Bank A - Firmware (2.5 MB)     │ ← Bank A 애플리케이션
-│                                 │
-│  [Application Code]             │
-│  [Vector Table]                 │
-│  [Const Data]                   │
-├─────────────────────────────────┤ 0x002C1000
-│  Bank Metadata B (4 KB)         │ ← Bank B 메타데이터
-├─────────────────────────────────┤ 0x002C2000
-│  Bank B - Firmware (2.5 MB)     │ ← Bank B 애플리케이션
-│                                 │
-│  [Application Code]             │
-│  [Vector Table]                 │
-│  [Const Data]                   │
-├─────────────────────────────────┤ 0x00542000
-│  Configuration Data (256 KB)    │ ← 영구 설정
-├─────────────────────────────────┤ 0x00582000
-│  Log Buffer (512 KB)            │ ← 로그 저장
-└─────────────────────────────────┘ 0x00600000
++---------------------------------+ 0x00000000
+|  Bootloader (256 KB)            | <-  ( )
++---------------------------------+ 0x00040000
+|  Bank Metadata A (4 KB)         | <- Bank A 
++---------------------------------+ 0x00041000
+|  Bank A - Firmware (2.5 MB)     | <- Bank A 
+|                                 |
+|  [Application Code]             |
+|  [Vector Table]                 |
+|  [Const Data]                   |
++---------------------------------+ 0x002C1000
+|  Bank Metadata B (4 KB)         | <- Bank B 
++---------------------------------+ 0x002C2000
+|  Bank B - Firmware (2.5 MB)     | <- Bank B 
+|                                 |
+|  [Application Code]             |
+|  [Vector Table]                 |
+|  [Const Data]                   |
++---------------------------------+ 0x00542000
+|  Configuration Data (256 KB)    | <-  
++---------------------------------+ 0x00582000
+|  Log Buffer (512 KB)            | <-  
++---------------------------------+ 0x00600000
 ```
 
-### **Bank Metadata 구조**
+### **Bank Metadata **
 
 ```c
 typedef struct {
@@ -248,35 +248,35 @@ typedef struct {
     uint32_t crc32;
     uint8_t  signature[256];      // PQC Dilithium signature
     uint32_t build_timestamp;
-    uint32_t boot_count;          // 부팅 시도 횟수
+    uint32_t boot_count;          //   
     uint32_t last_boot_time;
     uint8_t  status;              // 0=Invalid, 1=Valid, 2=Testing
     uint8_t  reserved[243];
 } __attribute__((packed)) BankMetadata;  // Total: 512 bytes
 ```
 
-### **Flash 프로그래밍 (실제 TC375)**
+### **Flash  ( TC375)**
 
 ```c
 #include "IfxFlash.h"
 
 bool writeFlashSector(uint32_t address, const uint8_t* data, size_t length) {
-    // 1. Flash 쓰기 가능 확인
+    // 1. Flash   
     if (!IfxFlash_isWriteProtected(address)) {
         return false;
     }
     
-    // 2. 섹터 단위로 정렬 (256 KB)
+    // 2.    (256 KB)
     uint32_t sector_addr = address & ~(0x40000 - 1);
     
-    // 3. 섹터 지우기 (필수!)
+    // 3.   (!)
     IfxFlash_eraseSector(sector_addr);
     
-    // 4. 페이지 단위로 쓰기 (512 bytes)
+    // 4.    (512 bytes)
     for (size_t i = 0; i < length; i += 512) {
         IfxFlash_writePage(address + i, &data[i], 512);
         
-        // 5. 쓰기 검증
+        // 5.  
         if (memcmp((void*)(address + i), &data[i], 512) != 0) {
             return false;  // Write verify failed
         }
@@ -286,7 +286,7 @@ bool writeFlashSector(uint32_t address, const uint8_t* data, size_t length) {
 }
 ```
 
-### **부트로더 로직 (실제 TC375)**
+### **  ( TC375)**
 
 ```c
 // bootloader.c - Runs first after reset
@@ -296,19 +296,19 @@ bool writeFlashSector(uint32_t address, const uint8_t* data, size_t length) {
 #define METADATA_SIZE 0x1000
 
 void bootloader_main(void) {
-    // 1. 하드웨어 초기화 (최소한만)
+    // 1.   ()
     init_minimal_hardware();
     
-    // 2. Bank 메타데이터 읽기
+    // 2. Bank  
     BankMetadata* meta_a = (BankMetadata*)0x00040000;
     BankMetadata* meta_b = (BankMetadata*)0x002C1000;
     
     BootBank active_bank = getStoredActiveBank();
     
-    // 3. 부팅 시도 카운터 증가
+    // 3.    
     incrementBootCountNV(active_bank);
     
-    // 4. Watchdog 방어: 3회 실패 시 자동 롤백
+    // 4. Watchdog : 3    
     if (getBootCountNV(active_bank) >= 3) {
         printf("[Bootloader] Boot failure detected, auto-rollback\n");
         
@@ -324,7 +324,7 @@ void bootloader_main(void) {
         }
     }
     
-    // 5. 현재 뱅크 검증
+    // 5.   
     BankMetadata* current_meta = (active_bank == BANK_A) ? meta_a : meta_b;
     
     if (current_meta->magic_number != 0xA5A5A5A5) {
@@ -341,20 +341,20 @@ void bootloader_main(void) {
         goto_fallback();
     }
     
-    // 6. 정상 부팅
+    // 6.  
     printf("[Bootloader] Booting Bank %c v%d\n", 
            active_bank == BANK_A ? 'A' : 'B',
            current_meta->firmware_version);
     
-    resetBootCountNV(active_bank);  // 성공 시 리셋
+    resetBootCountNV(active_bank);  //   
     
-    // 7. 애플리케이션으로 점프
+    // 7.  
     uint32_t app_start = (active_bank == BANK_A) ? BANK_A_START : BANK_B_START;
     jumpToApplication(app_start);
 }
 ```
 
-### **Application 첫 실행 시 (자가 검증)**
+### **Application    ( )**
 
 ```c
 // application_main.c
@@ -362,56 +362,56 @@ void bootloader_main(void) {
 void application_init(void) {
     BootBank my_bank = Bootloader::getActiveBank();
     
-    // 1. Watchdog 시작
-    startWatchdog(5000);  // 5초 타임아웃
+    // 1. Watchdog 
+    startWatchdog(5000);  // 5 
     
-    // 2. 자가 진단 (Self-Test)
+    // 2.   (Self-Test)
     bool self_test_ok = true;
     
-    // RAM 테스트
+    // RAM 
     if (!testRAM()) {
         self_test_ok = false;
         logError("RAM test failed");
     }
     
-    // 주요 하드웨어 테스트
+    //   
     if (!testCAN() || !testEthernet() || !testADC()) {
         self_test_ok = false;
         logError("Hardware test failed");
     }
     
-    // Gateway 연결 테스트
+    // Gateway  
     if (!connectToGateway()) {
         self_test_ok = false;
         logError("Gateway connection failed");
     }
     
-    // 3. 자가 진단 실패 시 롤백
+    // 3.     
     if (!self_test_ok) {
         printf("[App] Self-test failed, marking firmware invalid\n");
         Bootloader::markFirmwareInvalid(my_bank);
-        systemReset();  // Bootloader가 자동으로 fallback 선택
+        systemReset();  // Bootloader  fallback 
     }
     
-    // 4. 자가 진단 성공 → 펌웨어 검증 완료
+    // 4.    ->   
     Bootloader::markFirmwareValid(my_bank);
     resetBootCount(my_bank);
     
-    // 5. Watchdog 정상 킥
+    // 5. Watchdog  
     kickWatchdog();
     
-    // 6. 정상 동작 시작
+    // 6.   
     printf("[App] Firmware validated, entering normal operation\n");
 }
 ```
 
 ---
 
-## 3️⃣ **A/B 파티션 관리**
+## 3⃣ **A/B  **
 
-### **Non-Volatile Storage (영구 저장)**
+### **Non-Volatile Storage ( )**
 
-#### **Option 1: EEPROM 사용**
+#### **Option 1: EEPROM **
 
 ```c
 // TC375 EEPROM (64 KB)
@@ -421,14 +421,14 @@ typedef struct {
     uint8_t active_bank;      // 0=Bank A, 1=Bank B
     uint8_t boot_count_a;
     uint8_t boot_count_b;
-    uint32_t crc;             // 데이터 무결성
+    uint32_t crc;             //  
 } BootConfig;
 
 BootBank readActiveBank(void) {
     BootConfig config;
     IfxFlash_readEeprom(BOOT_CONFIG_ADDR, &config, sizeof(config));
     
-    // CRC 검증
+    // CRC 
     if (calculateCRC(&config, sizeof(config) - 4) != config.crc) {
         // Corruption! Default to Bank A
         return BANK_A;
@@ -446,7 +446,7 @@ void setActiveBank(BootBank bank) {
 }
 ```
 
-#### **Option 2: Flash Data Sector 사용**
+#### **Option 2: Flash Data Sector **
 
 ```c
 // Dedicated Flash sector for boot config
@@ -470,7 +470,7 @@ void updateBankMetadata(BootBank bank, BankMetadata* meta) {
 
 ---
 
-## 🔄 **완전한 OTA 흐름 (에러 처리 포함)**
+## [UPDATE] ** OTA  (  )**
 
 ### **1. Download Phase**
 
@@ -478,7 +478,7 @@ void updateBankMetadata(BootBank bank, BankMetadata* meta) {
 OtaResult ota_download(FirmwareMetadata* meta) {
     OtaTransaction txn;
     
-    // Transaction 시작
+    // Transaction 
     if (!txn.begin()) {
         return OTA_ERROR_INIT;
     }
@@ -523,7 +523,7 @@ OtaResult ota_download(FirmwareMetadata* meta) {
 OtaResult ota_verify(FirmwareMetadata* meta) {
     BootBank target = getTargetBank();
     
-    // 1. CRC32 검증
+    // 1. CRC32 
     uint32_t calculated_crc = calculateCRC32(target);
     if (calculated_crc != meta->crc32) {
         printf("[OTA] CRC mismatch: calc=0x%08X, expect=0x%08X\n",
@@ -534,14 +534,14 @@ OtaResult ota_verify(FirmwareMetadata* meta) {
         return OTA_ERROR_CRC;
     }
     
-    // 2. PQC 서명 검증 (Dilithium3)
+    // 2. PQC   (Dilithium3)
     if (!verifyDilithiumSignature(target, meta->signature)) {
         printf("[OTA] Signature verification failed\n");
         eraseBank(target);
         return OTA_ERROR_SIGNATURE;
     }
     
-    // 3. Metadata 저장
+    // 3. Metadata 
     saveBankMetadata(target, meta);
     
     return OTA_SUCCESS;
@@ -558,13 +558,13 @@ OtaResult ota_install(void) {
     // Critical Section Start
     disableInterrupts();
     
-    // 1. 타겟 뱅크를 "Testing" 상태로 마킹
+    // 1.   "Testing"  
     markBankTesting(target);
     
-    // 2. Active 뱅크 전환 (원자적 연산!)
+    // 2. Active   ( !)
     setActiveBank(target);
     
-    // 3. 이전 뱅크는 백업으로 유지
+    // 3.    
     markBankBackup(current);
     
     enableInterrupts();
@@ -578,14 +578,14 @@ OtaResult ota_install(void) {
 }
 ```
 
-### **4. Rollback (언제든 가능)**
+### **4. Rollback ( )**
 
 ```c
 OtaResult ota_rollback(void) {
     BootBank current = getCurrentBank();
     BootBank previous = (current == BANK_A) ? BANK_B : BANK_A;
     
-    // 1. 이전 뱅크 유효성 확인
+    // 1.    
     BankMetadata prev_meta;
     if (!loadBankMetadata(previous, &prev_meta)) {
         return OTA_ERROR_NO_BACKUP;
@@ -595,10 +595,10 @@ OtaResult ota_rollback(void) {
         return OTA_ERROR_BACKUP_INVALID;
     }
     
-    // 2. 현재 뱅크를 Invalid로 마킹
+    // 2.   Invalid 
     markBankInvalid(current);
     
-    // 3. 이전 뱅크로 전환
+    // 3.   
     setActiveBank(previous);
     resetBootCount(previous);
     
@@ -606,7 +606,7 @@ OtaResult ota_rollback(void) {
            previous == BANK_A ? 'A' : 'B',
            prev_meta.firmware.version);
     
-    // 4. 시스템 재부팅
+    // 4.  
     systemReset();
     
     return OTA_SUCCESS;
@@ -615,55 +615,55 @@ OtaResult ota_rollback(void) {
 
 ---
 
-## 🛡️ **Fail-Safe 메커니즘**
+##  **Fail-Safe **
 
-### **1. Watchdog 보호**
+### **1. Watchdog **
 
 ```c
 void application_main_loop(void) {
     while (1) {
-        // 정상 동작
+        //  
         processMessages();
         updateSensors();
         
-        // Watchdog 킥 (정상 동작 증명)
+        // Watchdog  (  )
         IfxScuWdt_clearCpuEndinit();
         IfxScuWdt_setCpuEndinit();
         
-        // 만약 여기 도달 못하면 → Watchdog reset → Bootloader가 감지
+        //     -> Watchdog reset -> Bootloader 
     }
 }
 ```
 
-### **2. 다단계 Fallback**
+### **2.  Fallback**
 
 ```
-1차 시도: Bank A 부팅
-  ↓ (CRC 실패)
-2차 시도: Bank B 부팅
-  ↓ (Signature 실패)
-3차 시도: Recovery Mode (USB DFU)
+1 : Bank A 
+  | (CRC )
+2 : Bank B 
+  | (Signature )
+3 : Recovery Mode (USB DFU)
 ```
 
-### **3. Power Loss 방어**
+### **3. Power Loss **
 
 ```c
-// Flash 쓰기 중 전원 끊김 대비
+// Flash     
 bool safeFlashWrite(uint32_t addr, const uint8_t* data, size_t len) {
-    // 1. Transaction marker 쓰기
+    // 1. Transaction marker 
     writeTransactionMarker(TRANSACTION_START);
     
-    // 2. 실제 데이터 쓰기
+    // 2.   
     bool result = IfxFlash_writePage(addr, data, len);
     
-    // 3. Transaction 완료 마킹
+    // 3. Transaction  
     if (result) {
         writeTransactionMarker(TRANSACTION_COMPLETE);
     }
     
-    // 부팅 시 체크:
-    // - TRANSACTION_START만 있고 COMPLETE 없으면 → 쓰기 중 끊김
-    // - 해당 섹터 무효화
+    //   :
+    // - TRANSACTION_START  COMPLETE  ->   
+    // -   
     
     return result;
 }
@@ -671,74 +671,74 @@ bool safeFlashWrite(uint32_t addr, const uint8_t* data, size_t len) {
 
 ---
 
-## 📝 **실제 사용 시나리오**
+## [NOTE] **  **
 
-### **시나리오 1: 정상 OTA**
+### ** 1:  OTA**
 
 ```
-1. Gateway → UDS: RequestDownload
-2. TC375: Bank B erase → OK
-3. Gateway → UDS: TransferData (blocks)
-4. TC375: Write to Bank B → OK
-5. Gateway → UDS: RequestTransferExit
-6. TC375: Verify CRC → OK
-7. TC375: Verify Signature → OK
+1. Gateway -> UDS: RequestDownload
+2. TC375: Bank B erase -> OK
+3. Gateway -> UDS: TransferData (blocks)
+4. TC375: Write to Bank B -> OK
+5. Gateway -> UDS: RequestTransferExit
+6. TC375: Verify CRC -> OK
+7. TC375: Verify Signature -> OK
 8. TC375: Switch to Bank B
-9. Reboot → Boot from Bank B → Success!
-10. Bank B validated → Bank A kept as backup
+9. Reboot -> Boot from Bank B -> Success!
+10. Bank B validated -> Bank A kept as backup
 ```
 
-### **시나리오 2: 다운로드 중 에러**
+### ** 2:   **
 
 ```
-1-4. (동일)
+1-4. ()
 5. Transfer block #50: CRC error!
-6. TC375: Rollback → Erase Bank B
-7. Status: Bank A still active (안전!)
+6. TC375: Rollback -> Erase Bank B
+7. Status: Bank A still active (!)
 ```
 
-### **시나리오 3: 새 펌웨어 부팅 실패**
+### ** 3:    **
 
 ```
-1-8. (동일)
-9. Reboot → Bank B 부팅 시도
-10. Self-test 실패! (예: Gateway 연결 실패)
+1-8. ()
+9. Reboot -> Bank B  
+10. Self-test ! (: Gateway  )
 11. Bootloader: boot_count_b = 1
-12. Reboot → Bank B 재시도
-13. 또 실패! boot_count_b = 2
-14. Reboot → Bank B 재시도
-15. 또 실패! boot_count_b = 3 ≥ MAX
+12. Reboot -> Bank B 
+13.  ! boot_count_b = 2
+14. Reboot -> Bank B 
+15.  ! boot_count_b = 3 ≥ MAX
 16. Bootloader: Auto-rollback to Bank A
-17. Bank A 부팅 → 정상!
+17. Bank A  -> !
 ```
 
 ---
 
-## 🔧 **TC375 실제 구현 팁**
+## [CONFIG] **TC375   **
 
-### **1. Flash 4 Click (외부 64 MB) 활용**
+### **1. Flash 4 Click ( 64 MB) **
 
 ```
-TC375 내부 Flash (6 MB):
-├── Bootloader (256 KB)
-├── Bank A (2.5 MB)       ← 현재 실행
-└── Bank B (2.5 MB)       ← OTA 타겟
+TC375  Flash (6 MB):
++-- Bootloader (256 KB)
++-- Bank A (2.5 MB)       <-  
++-- Bank B (2.5 MB)       <- OTA 
 
 Flash 4 Click (64 MB):
-├── Backup Bank A (2.5 MB)     ← 추가 백업!
-├── Backup Bank B (2.5 MB)
-├── OTA Download Buffer (10 MB) ← 임시 버퍼
-└── Logs (나머지)
++-- Backup Bank A (2.5 MB)     <-  !
++-- Backup Bank B (2.5 MB)
++-- OTA Download Buffer (10 MB) <-  
++-- Logs ()
 ```
 
-**장점:**
+**:**
 - 3-way backup (Internal A + B, External backup)
-- 다운로드 버퍼 → 검증 후 내부 Flash로 복사
+-   ->    Flash 
 
-### **2. 메모리 최적화**
+### **2.  **
 
 ```c
-// 섹터 단위 프로그래밍 (256 KB)
+//    (256 KB)
 #define SECTOR_SIZE  0x40000
 
 for (uint32_t sector = 0; sector < BANK_SIZE; sector += SECTOR_SIZE) {
@@ -755,49 +755,49 @@ for (uint32_t sector = 0; sector < BANK_SIZE; sector += SECTOR_SIZE) {
 
 ---
 
-## 📊 **성능 고려사항**
+## [TABLE] ** **
 
-### **Flash 쓰기 시간 (TC375)**
+### **Flash   (TC375)**
 
 ```
 Sector Erase (256 KB):  ~500 ms
 Page Write (512 B):     ~5 ms
 
-Bank 전체 (2.5 MB):
-  Erase: 10 sectors × 500 ms = 5초
-  Write: 5120 pages × 5 ms = 25초
-  ───────────────────────────
-  Total: ~30초
+Bank  (2.5 MB):
+  Erase: 10 sectors × 500 ms = 5
+  Write: 5120 pages × 5 ms = 25
+  ---------------------------
+  Total: ~30
 ```
 
-### **Rollback 시간**
+### **Rollback **
 
 ```
-단순 뱅크 전환: <100 ms (메타데이터만 변경)
-Reboot: ~2초
-Total: ~2초
+  : <100 ms ( )
+Reboot: ~2
+Total: ~2
 
-→ 매우 빠른 복구!
+->   !
 ```
 
 ---
 
-## 🎯 **요약**
+## [TARGET] ****
 
-### **핵심 3요소:**
+### ** 3:**
 
-1. **UDS**: 표준 진단 프로토콜로 OTA 제어
-2. **Rollback**: 다단계 fallback으로 brick 방지
-3. **A/B 파티션**: 무중단 업데이트, 즉시 복구
+1. **UDS**:    OTA 
+2. **Rollback**:  fallback brick 
+3. **A/B **:  ,  
 
-### **Safety Net 순서:**
+### **Safety Net :**
 
 ```
-Level 1: CRC 검증 실패 → 다운로드 중단
-Level 2: Signature 실패 → 설치 거부
-Level 3: 부팅 3회 실패 → 자동 rollback
-Level 4: 양쪽 뱅크 실패 → USB Recovery
+Level 1: CRC   ->  
+Level 2: Signature  ->  
+Level 3:  3  ->  rollback
+Level 4:    -> USB Recovery
 ```
 
-**결과:** Brick 가능성 거의 0%! 🛡️
+**:** Brick   0%! 
 
