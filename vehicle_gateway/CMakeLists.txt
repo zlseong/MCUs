@@ -40,8 +40,16 @@ target_link_libraries(vmg_common
 )
 
 # VMG DoIP Server (with mbedTLS - standard TLS 1.3, no PQC)
+# This is the PRIMARY server for in-vehicle communication
 add_executable(vmg_doip_server
-    src/doip_server_mbedtls.cpp
+    example_vmg_doip_server_mbedtls.cpp
+)
+
+# Plain DoIP Server (legacy, no TLS)
+add_executable(vmg_doip_server_plain
+    src/doip_server.cpp
+    example_vmg_doip_server.cpp
+    src/uds_service_handler.cpp
 )
 
 # VMG Gateway Main (optional, for testing)
@@ -52,6 +60,10 @@ add_executable(vmg_gateway
 
 target_link_libraries(vmg_doip_server
     vmg_common
+    ${CMAKE_THREAD_LIBS_INIT}
+)
+
+target_link_libraries(vmg_doip_server_plain
     ${CMAKE_THREAD_LIBS_INIT}
 )
 
@@ -93,7 +105,7 @@ target_compile_options(vmg_common PRIVATE
 )
 
 # Install
-install(TARGETS vmg_doip_server vmg_https_client vmg_mqtt_client
+install(TARGETS vmg_doip_server vmg_doip_server_plain vmg_https_client vmg_mqtt_client
     RUNTIME DESTINATION bin
 )
 

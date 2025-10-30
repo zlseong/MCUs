@@ -39,8 +39,10 @@ int main(int argc, char** argv) {
     std::string key = argv[3];
     std::string ca = argv[4];
     
-    // Use ML-KEM for external servers
-    const PQC_Config* config = &PQC_CONFIGS[4]; // ML-KEM-768 + ML-DSA-65 (recommended)
+    // PQC Configuration for External Server (MQTT Broker)
+    // Change this to test different parameters (0-5)
+    const int PQC_CONFIG_ID = 1; // Default: ML-KEM-768 + ECDSA-P256
+    const PQC_Config* config = &PQC_CONFIGS[PQC_CONFIG_ID];
     
     std::cout << "========================================" << std::endl;
     std::cout << "VMG MQTT Client with PQC" << std::endl;

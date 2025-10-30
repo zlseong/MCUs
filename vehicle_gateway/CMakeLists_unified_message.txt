@@ -1,0 +1,43 @@
+# CMakeLists.txt for Unified Message Example
+cmake_minimum_required(VERSION 3.15)
+project(VMG_Unified_Message CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find nlohmann_json
+find_package(nlohmann_json 3.2.0 REQUIRED)
+
+# Example executable
+add_executable(unified_message_example
+    example_unified_message.cpp
+)
+
+target_include_directories(unified_message_example PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(unified_message_example PRIVATE
+    nlohmann_json::nlohmann_json
+)
+
+# Install
+install(TARGETS unified_message_example
+    RUNTIME DESTINATION bin
+)
+
+install(FILES
+    include/unified_message.hpp
+    DESTINATION include/vmg
+)
+
+install(FILES
+    docs/unified_message_format.md
+    DESTINATION share/doc/vmg
+)
+
+message(STATUS "Unified Message Format Configuration:")
+message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  nlohmann_json: ${nlohmann_json_VERSION}")
+

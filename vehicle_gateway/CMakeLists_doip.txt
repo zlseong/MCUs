@@ -1,0 +1,61 @@
+# CMakeLists.txt for VMG DoIP Server
+cmake_minimum_required(VERSION 3.15)
+project(VMG_DoIP_Server CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Compiler flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+
+# Source files
+set(DOIP_SOURCES
+    src/doip_server.cpp
+    src/uds_service_handler.cpp
+)
+
+# Include directories
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+# DoIP Server Library
+add_library(vmg_doip_server STATIC ${DOIP_SOURCES})
+target_include_directories(vmg_doip_server PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# Threads library (required for std::thread)
+find_package(Threads REQUIRED)
+target_link_libraries(vmg_doip_server PUBLIC Threads::Threads)
+
+# Example executable
+add_executable(vmg_doip_example example_vmg_doip_server.cpp)
+target_link_libraries(vmg_doip_example PRIVATE vmg_doip_server)
+
+# Optional: mbedTLS support (for TLS)
+option(ENABLE_TLS "Enable TLS support using mbedTLS" OFF)
+if(ENABLE_TLS)
+    find_package(MbedTLS REQUIRED)
+    target_compile_definitions(vmg_doip_server PUBLIC ENABLE_DOIP_TLS)
+    target_link_libraries(vmg_doip_server PUBLIC MbedTLS::mbedtls MbedTLS::mbedcrypto MbedTLS::mbedx509)
+endif()
+
+# Install targets
+install(TARGETS vmg_doip_server vmg_doip_example
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+install(DIRECTORY include/
+    DESTINATION include/vmg
+    FILES_MATCHING PATTERN "*.hpp"
+)
+
+# Print configuration
+message(STATUS "VMG DoIP Server Configuration:")
+message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
+message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  TLS Support: ${ENABLE_TLS}")
+

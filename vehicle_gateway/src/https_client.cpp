@@ -133,8 +133,10 @@ int main(int argc, char** argv) {
         hostname = hostname.substr(0, colon_pos);
     }
     
-    // Use ML-KEM for external servers
-    const PQC_Config* config = &PQC_CONFIGS[4]; // ML-KEM-768 + ML-DSA-65 (recommended)
+    // PQC Configuration for External Server
+    // Change this to test different parameters (0-5)
+    const int PQC_CONFIG_ID = 1; // Default: ML-KEM-768 + ECDSA-P256
+    const PQC_Config* config = &PQC_CONFIGS[PQC_CONFIG_ID];
     
     std::cout << "========================================" << std::endl;
     std::cout << "VMG HTTPS Client with PQC" << std::endl;
