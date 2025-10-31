@@ -153,8 +153,8 @@ void pqc_server_destroy(PQC_Server* server) {
 
 // Example usage for DoIP
 int pqc_doip_server_example(uint16_t port) {
-    // Use ML-KEM-768 + ML-DSA-65 (recommended)
-    const PQC_Config* config = &PQC_CONFIGS[1]; // mlkem768 + mldsa65
+    // Use ML-KEM-768 + ECDSA-P256 (recommended)
+    const PQC_Config* config = &PQC_CONFIGS[2]; // [2] mlkem768 + ecdsa
     
     pqc_print_config(config);
     

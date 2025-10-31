@@ -89,6 +89,7 @@ const char* pqc_get_cert_filename(const PQC_Config* config, int is_server) {
     
     // KEM name mapping
     switch (config->kem) {
+        case KEM_X25519: kem_prefix = "x25519"; break;
         case KEM_MLKEM512: kem_prefix = "mlkem512"; break;
         case KEM_MLKEM768: kem_prefix = "mlkem768"; break;
         case KEM_MLKEM1024: kem_prefix = "mlkem1024"; break;

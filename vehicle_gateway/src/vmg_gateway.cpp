@@ -17,17 +17,24 @@ extern "C" {
 
 // ============================================================================
 // PQC Configuration for External Server Communication
-// Change this number to test different PQC parameters (0-5)
+// Change this number to test different PQC parameters (0-12)
 // ============================================================================
-#define PQC_CONFIG_ID_FOR_EXTERNAL_SERVER  1   // Default: ML-KEM-768 + ECDSA-P256
+#define PQC_CONFIG_ID_FOR_EXTERNAL_SERVER  2   // Default: ML-KEM-768 + ECDSA-P256
 
-// Available configurations:
-// [0] ML-KEM-512  + ECDSA-P256  (fastest, 128-bit)
-// [1] ML-KEM-768  + ECDSA-P256  (recommended, 192-bit) <- DEFAULT
-// [2] ML-KEM-1024 + ECDSA-P256  (highest security, 256-bit)
-// [3] ML-KEM-512  + ML-DSA-44   (pure PQC, 128-bit)
-// [4] ML-KEM-768  + ML-DSA-65   (pure PQC, 192-bit)
-// [5] ML-KEM-1024 + ML-DSA-87   (pure PQC, 256-bit)
+// Available configurations (13 combinations):
+// [0]  X25519        + ECDSA-P256  (Classical, baseline)
+// [1]  ML-KEM-512    + ECDSA-P256  (Hybrid, 128-bit)
+// [2]  ML-KEM-768    + ECDSA-P256  (Hybrid, 192-bit) <- DEFAULT RECOMMENDED
+// [3]  ML-KEM-1024   + ECDSA-P256  (Hybrid, 256-bit)
+// [4]  ML-KEM-512    + ML-DSA-44   (Pure PQC, 128-bit)
+// [5]  ML-KEM-512    + ML-DSA-65   (Pure PQC, 128-bit)
+// [6]  ML-KEM-512    + ML-DSA-87   (Pure PQC, 128-bit)
+// [7]  ML-KEM-768    + ML-DSA-44   (Pure PQC, 192-bit)
+// [8]  ML-KEM-768    + ML-DSA-65   (Pure PQC, 192-bit)
+// [9]  ML-KEM-768    + ML-DSA-87   (Pure PQC, 192-bit)
+// [10] ML-KEM-1024   + ML-DSA-44   (Pure PQC, 256-bit)
+// [11] ML-KEM-1024   + ML-DSA-65   (Pure PQC, 256-bit)
+// [12] ML-KEM-1024   + ML-DSA-87   (Pure PQC, 256-bit)
 
 // Forward declarations for servers
 extern int pqc_doip_server_example(uint16_t port);

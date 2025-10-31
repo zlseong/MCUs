@@ -10,9 +10,10 @@
 #include <openssl/err.h>
 #include <stdint.h>
 
-// PQC Algorithm Types (Pure PQC only)
+// PQC Algorithm Types (Hybrid TLS Support)
 typedef enum {
-    KEM_MLKEM512 = 0,       // Pure PQC (128-bit security)
+    KEM_X25519 = 0,         // Classical ECC (for Hybrid)
+    KEM_MLKEM512,           // Pure PQC (128-bit security)
     KEM_MLKEM768,           // Pure PQC (192-bit security) - RECOMMENDED
     KEM_MLKEM1024           // Pure PQC (256-bit security)
 } PQC_KEM_Type;
@@ -34,9 +35,14 @@ typedef struct {
     const char* openssl_sigalgs;
 } PQC_Config;
 
-// Predefined configurations (ML-KEM + ML-DSA or ECDSA)
+// Predefined configurations (13 combinations for Hybrid TLS)
 static const PQC_Config PQC_CONFIGS[] = {
-    // ML-KEM + ECDSA (Lighter signature)
+    // [0] Classical ECC (for baseline comparison)
+    {KEM_X25519, SIG_ECDSA_P256,
+     "X25519", "ECDSA-P256",
+     "x25519", "ecdsa_secp256r1_sha256"},
+    
+    // [1-3] ML-KEM + ECDSA (Hybrid with lighter signature)
     {KEM_MLKEM512, SIG_ECDSA_P256,
      "ML-KEM-512", "ECDSA-P256",
      "mlkem512", "ecdsa_secp256r1_sha256"},
@@ -49,14 +55,40 @@ static const PQC_Config PQC_CONFIGS[] = {
      "ML-KEM-1024", "ECDSA-P256",
      "mlkem1024", "ecdsa_secp256r1_sha256"},
     
-    // ML-KEM + ML-DSA (Pure PQC)
+    // [4-6] ML-KEM-512 + ML-DSA (Pure PQC, 128-bit)
     {KEM_MLKEM512, SIG_MLDSA44,
      "ML-KEM-512", "ML-DSA-44",
      "mlkem512", "mldsa44"},
     
+    {KEM_MLKEM512, SIG_MLDSA65,
+     "ML-KEM-512", "ML-DSA-65",
+     "mlkem512", "mldsa65"},
+    
+    {KEM_MLKEM512, SIG_MLDSA87,
+     "ML-KEM-512", "ML-DSA-87",
+     "mlkem512", "mldsa87"},
+    
+    // [7-9] ML-KEM-768 + ML-DSA (Pure PQC, 192-bit) - RECOMMENDED
+    {KEM_MLKEM768, SIG_MLDSA44,
+     "ML-KEM-768", "ML-DSA-44",
+     "mlkem768", "mldsa44"},
+    
     {KEM_MLKEM768, SIG_MLDSA65,
      "ML-KEM-768", "ML-DSA-65",
      "mlkem768", "mldsa65"},
+    
+    {KEM_MLKEM768, SIG_MLDSA87,
+     "ML-KEM-768", "ML-DSA-87",
+     "mlkem768", "mldsa87"},
+    
+    // [10-12] ML-KEM-1024 + ML-DSA (Pure PQC, 256-bit)
+    {KEM_MLKEM1024, SIG_MLDSA44,
+     "ML-KEM-1024", "ML-DSA-44",
+     "mlkem1024", "mldsa44"},
+    
+    {KEM_MLKEM1024, SIG_MLDSA65,
+     "ML-KEM-1024", "ML-DSA-65",
+     "mlkem1024", "mldsa65"},
     
     {KEM_MLKEM1024, SIG_MLDSA87,
      "ML-KEM-1024", "ML-DSA-87",

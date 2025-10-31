@@ -24,10 +24,10 @@ $OPENSSL req -new -x509 -days 3650 -nodes \
     -out ca_pqc.crt \
     -subj "/C=KR/O=VMG/CN=VMG-PQC-CA"
 
-# KEM types (Pure ML-KEM for external servers)
-KEMS=("mlkem512" "mlkem768" "mlkem1024")
+# KEM types (All combinations for Hybrid TLS)
+KEMS=("x25519" "mlkem512" "mlkem768" "mlkem1024")
 
-# Signature types (ML-DSA + ECDSA)
+# Signature types (ECDSA + ML-DSA)
 SIGS=("ecdsa_secp256r1_sha256" "mldsa44" "mldsa65" "mldsa87")
 
 echo "[2/8] Generating server certificates..."
@@ -35,6 +35,11 @@ echo "[2/8] Generating server certificates..."
 for kem in "${KEMS[@]}"; do
     for sig in "${SIGS[@]}"; do
         name="${kem}_${sig}"
+        
+        # Skip non-sensible combinations
+        if [ "$kem" = "x25519" ] && [ "$sig" != "ecdsa_secp256r1_sha256" ]; then
+            continue  # X25519 only pairs with ECDSA
+        fi
         
         # Map to OpenSSL sig algorithm
         case $sig in
@@ -80,6 +85,11 @@ echo "[3/8] Generating client certificates..."
 for kem in "${KEMS[@]}"; do
     for sig in "${SIGS[@]}"; do
         name="${kem}_${sig}"
+        
+        # Skip non-sensible combinations
+        if [ "$kem" = "x25519" ] && [ "$sig" != "ecdsa_secp256r1_sha256" ]; then
+            continue  # X25519 only pairs with ECDSA
+        fi
         
         case $sig in
             "ecdsa_secp256r1_sha256")
@@ -129,12 +139,22 @@ echo "CA:      certs/ca_pqc.crt"
 echo "Server:  certs/*_server.{crt,key}"
 echo "Client:  certs/*_client.{crt,key}"
 echo ""
-echo "Available combinations:"
-echo "  ML-KEM + ECDSA (lighter signature):"
-echo "    mlkem768_ecdsa_secp256r1_sha256_*"
+echo "Generated 13 combinations:"
 echo ""
-echo "  ML-KEM + ML-DSA (pure PQC):"
-echo "    mlkem768_mldsa65_* (recommended)"
+echo "  [0] X25519 + ECDSA-P256 (Classical, baseline)"
+echo ""
+echo "  [1-3] ML-KEM + ECDSA-P256 (Hybrid, lighter signature):"
+echo "    [2] mlkem768_ecdsa_secp256r1_sha256_* - RECOMMENDED (DEFAULT)"
+echo "    mlkem512/1024_ecdsa_secp256r1_sha256_*"
+echo ""
+echo "  [4-6] ML-KEM-512 + ML-DSA (Pure PQC, 128-bit):"
+echo "    mlkem512_mldsa44/65/87_*"
+echo ""
+echo "  [7-9] ML-KEM-768 + ML-DSA (Pure PQC, 192-bit):"
+echo "    mlkem768_mldsa44/65/87_*"
+echo ""
+echo "  [10-12] ML-KEM-1024 + ML-DSA (Pure PQC, 256-bit):"
+echo "    mlkem1024_mldsa44/65/87_*"
 echo ""
 echo "Note: Use generate_standard_certs.sh for DoIP (mbedTLS)"
 echo "=========================================="

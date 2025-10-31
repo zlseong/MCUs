@@ -19,24 +19,31 @@ Pure PQC TLS, DoIP, MQTT, HTTPS 지원.
   - ML-DSA-65 (Dilithium3): 192-bit 보안 (권장)
   - ML-DSA-87 (Dilithium5): 256-bit 보안
 
-### PQC 모드 (ML-KEM + ML-DSA/ECDSA)
+### Hybrid TLS 모드 (13가지 조합)
 
-Key Exchange는 ML-KEM만 사용 (양자 내성).
-Signature는 ML-DSA 또는 ECDSA 선택 가능.
+Key Exchange: X25519 또는 ML-KEM (양자 내성).
+Signature: ECDSA 또는 ML-DSA.
 
 권장 조합:
 ```
-ML-KEM-768 + ML-DSA-65 (Pure PQC, 192-bit 보안 강도)
-ML-KEM-768 + ECDSA-P256 (가벼운 서명)
+[2] ML-KEM-768 + ECDSA-P256 (Hybrid, 192-bit 보안 강도) - 기본값
+[8] ML-KEM-768 + ML-DSA-65 (Pure PQC, 가장 강력한 보안)
 ```
 
-가용 조합:
-- ML-KEM-512 + ECDSA-P256 (128-bit, lighter)
-- ML-KEM-768 + ECDSA-P256 (192-bit, lighter)
-- ML-KEM-1024 + ECDSA-P256 (256-bit, lighter)
-- ML-KEM-512 + ML-DSA-44 (128-bit, pure PQC)
-- ML-KEM-768 + ML-DSA-65 (192-bit, pure PQC) - **권장**
-- ML-KEM-1024 + ML-DSA-87 (256-bit, pure PQC)
+전체 13가지 조합:
+- [0] X25519 + ECDSA-P256 (Classical, baseline)
+- [1] ML-KEM-512 + ECDSA-P256 (Hybrid, 128-bit)
+- [2] ML-KEM-768 + ECDSA-P256 (Hybrid, 192-bit) - **권장 (기본값)**
+- [3] ML-KEM-1024 + ECDSA-P256 (Hybrid, 256-bit)
+- [4] ML-KEM-512 + ML-DSA-44 (Pure PQC, 128-bit)
+- [5] ML-KEM-512 + ML-DSA-65 (Pure PQC, 128-bit)
+- [6] ML-KEM-512 + ML-DSA-87 (Pure PQC, 128-bit)
+- [7] ML-KEM-768 + ML-DSA-44 (Pure PQC, 192-bit)
+- [8] ML-KEM-768 + ML-DSA-65 (Pure PQC, 192-bit)
+- [9] ML-KEM-768 + ML-DSA-87 (Pure PQC, 192-bit)
+- [10] ML-KEM-1024 + ML-DSA-44 (Pure PQC, 256-bit)
+- [11] ML-KEM-1024 + ML-DSA-65 (Pure PQC, 256-bit)
+- [12] ML-KEM-1024 + ML-DSA-87 (Pure PQC, 256-bit)
 
 ## 구성
 
@@ -115,8 +122,8 @@ TC375 클라이언트 연결:
 ```bash
 ./vmg_https_client \
     https://ota.example.com/firmware.bin \
-    certs/mlkem768_mldsa65_client.crt \
-    certs/mlkem768_mldsa65_client.key \
+    certs/mlkem768_ecdsa_secp256r1_sha256_client.crt \
+    certs/mlkem768_ecdsa_secp256r1_sha256_client.key \
     certs/ca_pqc.crt
 ```
 
@@ -125,14 +132,14 @@ TC375 클라이언트 연결:
 ```bash
 ./vmg_mqtt_client \
     mqtts://broker.example.com:8883 \
-    certs/mlkem768_mldsa65_client.crt \
-    certs/mlkem768_mldsa65_client.key \
+    certs/mlkem768_ecdsa_secp256r1_sha256_client.crt \
+    certs/mlkem768_ecdsa_secp256r1_sha256_client.key \
     certs/ca_pqc.crt
 ```
 
 ## 성능
 
-ML-KEM-768 + ML-DSA-65 기준 (Benchmark 결과):
+ML-KEM-768 + ECDSA-P256 기준 (Benchmark 결과):
 
 - 핸드셰이크: ~15ms
 - 인증서 크기: ~4KB

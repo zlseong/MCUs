@@ -4,7 +4,7 @@ End-to-End 시뮬레이션 도구 for all PQC parameter combinations
 
 ## pqc_simulator
 
-모든 ML-KEM (512/768/1024) + ML-DSA/ECDSA 조합을 테스트합니다.
+13가지 Hybrid TLS 조합 (X25519 + ML-KEM + ML-DSA/ECDSA)을 테스트합니다.
 
 ### 빌드
 
@@ -17,7 +17,7 @@ make
 
 ### 사용법
 
-#### 전체 테스트 (12개 조합)
+#### 전체 테스트 (13개 조합)
 ```bash
 ./pqc_simulator
 ```

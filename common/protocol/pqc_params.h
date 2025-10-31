@@ -16,14 +16,20 @@ extern "C" {
 #endif
 
 // ============================================================================
-// ML-KEM (FIPS 203) - Key Encapsulation Mechanism
+// KEM (Key Encapsulation Mechanism)
 // ============================================================================
 
 typedef enum {
-    PQC_KEM_MLKEM512  = 0,    // 128-bit security
-    PQC_KEM_MLKEM768  = 1,    // 192-bit security [RECOMMENDED]
-    PQC_KEM_MLKEM1024 = 2     // 256-bit security
+    PQC_KEM_X25519    = 0,    // Classical ECC (baseline)
+    PQC_KEM_MLKEM512  = 1,    // 128-bit security
+    PQC_KEM_MLKEM768  = 2,    // 192-bit security [RECOMMENDED]
+    PQC_KEM_MLKEM1024 = 3     // 256-bit security
 } PQC_KEM_Type;
+
+// X25519 Key Sizes (bytes)
+#define X25519_PUBLIC_KEY_SIZE      32
+#define X25519_SECRET_KEY_SIZE      32
+#define X25519_SHARED_SECRET_SIZE   32
 
 // ML-KEM Key Sizes (bytes)
 #define MLKEM512_PUBLIC_KEY_SIZE    800
@@ -119,29 +125,32 @@ typedef struct {
 // Predefined Configurations
 // ============================================================================
 
-// Configuration IDs
-#define PQC_CONFIG_MLKEM512_ECDSA_P256    0
-#define PQC_CONFIG_MLKEM512_ECDSA_P384    1
-#define PQC_CONFIG_MLKEM512_ECDSA_P521    2
+// Configuration IDs (13 combinations)
+#define PQC_CONFIG_X25519_ECDSA_P256      0   // Classical baseline
 
-#define PQC_CONFIG_MLKEM768_ECDSA_P256    3
-#define PQC_CONFIG_MLKEM768_ECDSA_P384    4
-#define PQC_CONFIG_MLKEM768_ECDSA_P521    5
+#define PQC_CONFIG_MLKEM512_ECDSA_P256    1   // Hybrid 128-bit
+#define PQC_CONFIG_MLKEM768_ECDSA_P256    2   // Hybrid 192-bit [DEFAULT]
+#define PQC_CONFIG_MLKEM1024_ECDSA_P256   3   // Hybrid 256-bit
 
-#define PQC_CONFIG_MLKEM1024_ECDSA_P256   6
-#define PQC_CONFIG_MLKEM1024_ECDSA_P384   7
-#define PQC_CONFIG_MLKEM1024_ECDSA_P521   8
+#define PQC_CONFIG_MLKEM512_MLDSA44       4   // Pure PQC 128-bit
+#define PQC_CONFIG_MLKEM512_MLDSA65       5
+#define PQC_CONFIG_MLKEM512_MLDSA87       6
 
-#define PQC_CONFIG_MLKEM512_MLDSA44       9
-#define PQC_CONFIG_MLKEM768_MLDSA65       10  // [RECOMMENDED]
-#define PQC_CONFIG_MLKEM1024_MLDSA87      11
+#define PQC_CONFIG_MLKEM768_MLDSA44       7   // Pure PQC 192-bit
+#define PQC_CONFIG_MLKEM768_MLDSA65       8   // Pure PQC 192-bit
+#define PQC_CONFIG_MLKEM768_MLDSA87       9
 
-#define PQC_CONFIG_COUNT                  12
+#define PQC_CONFIG_MLKEM1024_MLDSA44      10  // Pure PQC 256-bit
+#define PQC_CONFIG_MLKEM1024_MLDSA65      11
+#define PQC_CONFIG_MLKEM1024_MLDSA87      12
+
+#define PQC_CONFIG_COUNT                  13
 
 // Recommended configurations
-#define PQC_CONFIG_RECOMMENDED       PQC_CONFIG_MLKEM768_MLDSA65
-#define PQC_CONFIG_LIGHTWEIGHT       PQC_CONFIG_MLKEM512_ECDSA_P256
-#define PQC_CONFIG_HIGH_SECURITY     PQC_CONFIG_MLKEM1024_MLDSA87
+#define PQC_CONFIG_RECOMMENDED       PQC_CONFIG_MLKEM768_ECDSA_P256  // Hybrid [2]
+#define PQC_CONFIG_PURE_PQC          PQC_CONFIG_MLKEM768_MLDSA65     // Pure PQC [8]
+#define PQC_CONFIG_LIGHTWEIGHT       PQC_CONFIG_MLKEM512_ECDSA_P256  // Fast [1]
+#define PQC_CONFIG_HIGH_SECURITY     PQC_CONFIG_MLKEM1024_MLDSA87    // Max security [12]
 
 // ============================================================================
 // Helper Functions
