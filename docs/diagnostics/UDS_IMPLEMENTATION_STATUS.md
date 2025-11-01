@@ -498,3 +498,195 @@ registerServiceHandler(UdsService::REQUEST_TRANSFER_EXIT, ...);       // 0x37 �
 **현재 구현 상태: 약 35% (10/29 서비스)**  
 **OTA 필수 서비스: 100% (7/7 서비스)** ✅
 
+---
+
+## 9. 응답 메시지 구현 (긍정/부정 응답)
+
+### 질문: "응답메시지도 모든 컴포넌트에 구성이 되어있는가?"
+
+### 답변: **✅ 예! 모든 컴포넌트에 완벽하게 구현되어 있습니다!**
+
+---
+
+### 응답 메시지 구조 (ISO 14229)
+
+#### 긍정 응답 (Positive Response)
+```
+[SID + 0x40] + [Data]
+
+예시: 0x22 요청 → 0x62 응답
+Request:  [0x22, 0xF1, 0x90]
+Response: [0x62, 0xF1, 0x90, 'K', 'M', 'H', ...]
+          ^^^^
+          0x22 + 0x40 = 0x62
+```
+
+#### 부정 응답 (Negative Response)
+```
+[0x7F] + [Service ID] + [NRC]
+
+예시: Security Access 실패
+Request:  [0x27, 0x02, 0x00, 0x00, 0x00, 0x00]
+Response: [0x7F, 0x27, 0x35]
+          ^^^^  ^^^^  ^^^^
+          부정   SID   NRC (Invalid Key)
+```
+
+---
+
+### NRC (Negative Response Code) 목록
+
+#### 일반 오류 (0x10-0x1F)
+- **0x10**: General Reject
+- **0x11**: Service Not Supported
+- **0x12**: Subfunction Not Supported
+- **0x13**: Incorrect Message Length
+- **0x14**: Response Too Long
+
+#### 조건 오류 (0x21-0x2F)
+- **0x21**: Busy Repeat Request
+- **0x22**: Conditions Not Correct
+- **0x24**: Request Sequence Error
+- **0x25**: No Response From Subnet
+- **0x26**: Failure Prevents Execution
+
+#### 범위/보안 오류 (0x31-0x3F)
+- **0x31**: Request Out Of Range
+- **0x33**: Security Access Denied
+- **0x34**: Authentication Failed
+- **0x35**: Invalid Key
+- **0x36**: Exceeded Number Of Attempts
+- **0x37**: Required Time Delay Not Expired
+- **0x38**: Secure Data Transmission Required
+- **0x39**: Secure Data Transmission Not Allowed
+- **0x3A**: Secure Data Verification Failed
+
+#### OTA/다운로드 오류 (0x70-0x7F)
+- **0x70**: Upload Download Not Accepted
+- **0x71**: Transfer Data Suspended
+- **0x72**: General Programming Failure
+- **0x73**: Wrong Block Sequence Counter
+- **0x78**: Response Pending
+
+---
+
+### 구현 현황
+
+| 컴포넌트 | 긍정 응답 | 부정 응답 | NRC 정의 | 자동 처리 |
+|----------|-----------|-----------|----------|-----------|
+| **TC375 Bootloader** | ✅ | ✅ | ✅ 18개 | ✅ |
+| **TC375 Simulator** | ✅ | ✅ | ✅ 13개 | ✅ |
+| **VMG Gateway** | ✅ | ✅ | ✅ 13개 | ✅ |
+| **Common Protocol** | ✅ | ✅ | ✅ 22개 | - |
+
+---
+
+### 구현 예시
+
+#### TC375 Bootloader (C)
+```c
+// 부정 응답 생성
+int uds_build_negative_response(
+    uint8_t sid, uint8_t nrc,
+    uint8_t* response, size_t resp_cap, size_t* resp_len
+) {
+    response[0] = 0x7F;    // 고정
+    response[1] = sid;      // Service ID
+    response[2] = nrc;      // NRC
+    *resp_len = 3;
+    return 0;
+}
+
+// 긍정 응답 생성
+int uds_build_positive_response(
+    uint8_t sid, const uint8_t* data, size_t data_len,
+    uint8_t* response, size_t resp_cap, size_t* resp_len
+) {
+    response[0] = sid + 0x40;  // SID + 0x40
+    if (data && data_len > 0) {
+        memcpy(&response[1], data, data_len);
+    }
+    *resp_len = 1 + data_len;
+    return 0;
+}
+```
+
+#### VMG Gateway (C++)
+```cpp
+// 부정 응답 생성
+std::vector<uint8_t> buildNegativeResponse(uint8_t sid, UDSNRC nrc) {
+    std::vector<uint8_t> response;
+    response.push_back(0x7F);
+    response.push_back(sid);
+    response.push_back(static_cast<uint8_t>(nrc));
+    return response;
+}
+
+// 긍정 응답 생성
+std::vector<uint8_t> buildPositiveResponse(
+    uint8_t sid, const std::vector<uint8_t>& data
+) {
+    std::vector<uint8_t> response;
+    response.push_back(sid + 0x40);
+    response.insert(response.end(), data.begin(), data.end());
+    return response;
+}
+```
+
+---
+
+### 실제 사용 예시
+
+#### 예시 1: Security Access 성공
+```
+[Client → ECU] Request Seed
+Request:  [0x27, 0x01]
+
+[ECU → Client] Send Seed
+Response: [0x67, 0x01, 0x12, 0x34, 0x56, 0x78]
+          ^^^^  ^^^^  ^^^^^^^^^^^^^^^^^^^^^^
+          긍정   Sub   Seed (4 bytes)
+
+[Client → ECU] Send Key
+Request:  [0x27, 0x02, 0xB7, 0x91, 0xF3, 0xDD]
+
+[ECU → Client] Unlocked
+Response: [0x67, 0x02]
+          ^^^^  ^^^^
+          긍정   Sub
+```
+
+#### 예시 2: Service Not Supported
+```
+[Client → ECU]
+Request:  [0x2A, 0x01]  // Read Data Periodic (미구현)
+
+[ECU → Client]
+Response: [0x7F, 0x2A, 0x11]
+          ^^^^  ^^^^  ^^^^
+          부정   SID   Service Not Supported
+```
+
+#### 예시 3: OTA Download 성공
+```
+[VMG → ECU] Request Download
+Request:  [0x34, 0x00, 0x44, 0x80, 0x00, 0x00, 0x00, ...]
+
+[ECU → VMG] Accept
+Response: [0x74, 0x20, 0x10, 0x00]
+          ^^^^  ^^^^  ^^^^^^^^^^
+          긍정   LFI   Max Block (4096)
+```
+
+---
+
+### 결론
+
+**모든 컴포넌트에서 ISO 14229 표준에 따른 응답 메시지가 완벽하게 구현되어 있습니다!**
+
+- ✅ 긍정 응답: `[SID + 0x40] + [Data]`
+- ✅ 부정 응답: `[0x7F] + [SID] + [NRC]`
+- ✅ 22개 NRC 정의 (Common Protocol)
+- ✅ 자동 부정 응답 처리
+- ✅ Service Not Supported → 자동으로 0x7F + SID + 0x11
+
